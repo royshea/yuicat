@@ -1,0 +1,206 @@
+Managing CSS and JavaScript Includes Using Yuicat
+=================================================
+Roy Shea <feedback@parkipedia.com>
+November 2010
+
+
+Yuicat is a tool for managing HTML distributions that include a number
+of locally served CSS and JavaScript files.  The tool automates much of
+the busy work involved in updating HTML files to use a concatenated,
+minified, and optionally obfuscated versions of these files.  Yuicat is
+available for download from http://github.com/royshea/yuicat[Yuicat's
+github site] and can be cloned using:
+
+----
+git clone git://github.com/royshea/yuicat.git
+----
+
+
+Review of HTML Projects
+-----------------------
+
+Modern websites are the union of multiple technologies including HTML
+describing the page content, CSS for styling of the page, and JavaScript
+to provide a dynamic front end experience.  While both CSS and
+JavaScript can be included directly within the text of an HTML page,
+these resources are more often linked into an HTML page using `link` and
+`script` elements.  Linking to external files allows a single copy of
+the CSS or JavaScript file to be used on multiple pages and facilitates
+a clean separation between the HTML content, CSS presentation, and
+JavaScript application source.
+
+An easy way to improve the performance of a website is by concatenating
+and minifying all local CSS pulled into the page using `link` tags into
+a single large CSS file, and similarly concatenating and minify all
+local JavaScript pulled into the page using `script` tags into a single
+large JavaScript file.  Concatenating separate CSS or JavaScript files
+reduces the number of requests that a client needs to make to the back
+end server.  Minifying (and optional obfuscation) reduces the volume of
+data returned to a client.  Tools such as the
+http://developer.yahoo.com/yui/compressor/[YUI Compressor] from Yahoo
+already do a good job of concatenating and minifying CSS and JavaScript.
+
+
+Overview of Yuicat
+------------------
+
+Unfortunately, manually maintaining up-to-date versions of concatenated
+and minified files during development hinders frequent testing and
+raises the risk of launching an incorrect version of the website.
+Therefore, it is critical that a project automate this process to
+support frequent testing and to provide repeatability of the launch
+process.
+
+During the development of the http://www.parkipedia.com[Parkipedia]
+website, we began looking around for an easy to use management framework
+that automates this process of concatenating and minifying CSS and
+JavaScript used within our pages.  After not finding simple solution
+that meets our needs, we decided to take a few days and roll our own
+management framework.  The result is Yuicat.
+
+Yuicat uses a three step process to automate this functionality to
+developers:
+
+1. Yuicat examines each HTML file within a project.  For each HTML file
+found, Yuicat notes the locally served CSS and JavaScript associated
+with that HTML page by examining all `link` and `script` elements.
+
+2. Yuicat combines this knowledge of locally served CSS and JavaScript
+files with the http://developer.yahoo.com/yui/compressor/[YUI
+Compressor] from Yahoo to create a single minified CSS file and / or a
+single minified JavaScript file for each HTML page using `link` and / or
+`script` tags.
+
+3. Yuicat replaces the original `link` and `script` elements to locally
+served CSS and JavaScript with a single `link` element and a single
+`script` element linking to the newly created concatenated and minified
+CSS and JavaScript.
+
+
+Integrating Yuicat into Your Project
+------------------------------------
+
+Project Layout
+~~~~~~~~~~~~~~
+
+Yuicat assumes a model where HTML files use `link` and `script` tags to
+include local CSS and JavaScript files in pages.  This development model
+allows HTML authors fine grain resolution over what CSS and JavaScript
+resources are included with each page.
+
+The first step to adding Yuicat to a project is to describe both the
+physical and logical layout for the project.  The physical layout tells
+Yuicat where to find the HTML, CSS, and JavaScript files on the local
+system.  For example, at Parkipedia we use the following layout to
+organize our files:
+
+`$PARKIPEDIA/templates`:: HTML files used by Parkipedia.
+`$PARKIPEDIA/static/stylesheets`:: CSS used in Parkipedia.
+`$PARKIPEDIA/static/js`:: JavaScript used in Parkipedia.
+
+The logical layout describes the location from which the webserver
+serves CSS and JavaScript files.  These are the paths used by `link` and
+`script` tags to pull CSS and JavaScript into an HTML page.  This may,
+but need not, be the same as the physical layout.  The Parkipedia
+website serves files from the following locations:
+
+`/stylesheets`:: CSS served by http://www.parkipedia.com.
+`/js`:: JavaScript served by http://www.parkipedia.com.
+
+With this information in hand the specification of physical and logical
+layouts can be written to a configuration file that is used by Yuicat at
+runtime.  The configuration for Parkipedia is as follows:
+
+----
+css:
+    physical: static/stylesheets
+    logical: /stylesheets
+js:
+    physical: static/js
+    logical: /js
+html: templates
+----
+
+Note that if the physical layout uses relative path names, the Yuicat
+tool will need to be executed from the root of the relative path names.
+Given the specification listed above, we'll need to run Yuicat from the
+`$PARKIPEDIA` directory.
+
+Prefix for Created Files
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Yuicat creates a custom CSS file and a custom JavaScript file for each
+HTML page based on the `link` and `script` tags contained within that
+HTML page.  The name of the created file is `<prefix>_<filename>.<ext>`
+where `<prefix>` is replaced with a project specific prefix passed into
+Yuicat, `<filename>` is replaced by the basename of the HTML file that
+will be using the created resource, and `<ext>` is set to either `css`
+or `js` dependent on the type of the file.
+
+Parkipedia uses `parkipedia` as its prefix.  An alternate strategy is to
+use a time stamp or unique string for the prefix that changes with each
+release of the system.  By changing the prefix with each release,
+clients will not accidentally use old cached copies of CSS or JavaScript
+files after an update to the website.
+
+Other Important Arguments to Yuicat
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Yuicat modifies the underlying HTML of a project and creates new files.
+Due to these modifications of the underlying system, it is intended for
+use on a copy of a project.  The default behavior of Yuicat is to create
+backups of the files HTML files that it modifies as an extra
+precautionary step.  This behavior can be disabled to reduce file
+clutter.
+
+Yuicat uses the http://developer.yahoo.com/yui/compressor/[YUI
+Compressor] to concatenate and minify files.  The location of the JAR
+distribution of YUI Compressor is passed to Yuicat on the command line.
+
+A few other options are available.  You can learn about these using the
+`--help` option with Yuicat.
+
+Putting it All Together
+~~~~~~~~~~~~~~~~~~~~~~~
+
+----
+cd $PARKIPEDIA
+cat "css:
+    physical: static/stylesheets
+    logical: /stylesheets
+js:
+    physical: static/js
+    logical: /js
+html: templates" > layout.yaml
+yuicat.py -p parkipedia -l layout.yaml -o $LAUNCH_APPDIR/yuicat.yaml --yuijar $YAHOO/yuicompressor-2.4.2.jar
+----
+
+
+Interaction of Yuicat with Templating Systems
+---------------------------------------------
+
+The Parkipedia back end uses the http://www.djangoproject.com/[Django]
+framework.  The templating provided by Django and other web frameworks
+works very well with the Yuicat tool.  Most Parkipedia pages are
+actually the combination of a common `base.html` template, that
+describes the general layout Parkipedia pages, and a page specific HTML
+file that extends the `base.html` template.  Yuicat produces CSS and
+JavaScript specific files for each HTML file encountered.  This results
+in custom CSS and JavaScript files for the `base.html` file and each
+HTML file extending `base.html`.  The end result are pages that link to
+both CSS and JavaScript files from the base page, and separate CSS and
+JavaScript files from the extending page.  This allows common CSS and
+JavaScript used throughout Parkipedia to be included in `base.html` and
+cached for multiple Parkipedia pages.  Page specific CSS and JavaScript
+is only served to the user after the user visits that specific page.
+
+
+Closing Comments
+----------------
+
+We've found Yuicat to help in our daily work with Parkipedia.  We hope
+that you too will find that Yuicat helps with your system.  Feel free to
+email comments, questions, or patches to the
+mailto:feedback@parkipedia.com[Parkipedia Team].  The source is
+available online at http://github.com/royshea/yuicat[Yuicat's github
+site].
