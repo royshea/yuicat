@@ -67,8 +67,8 @@ element_template['js'] = '<script type="text/javascript" src="%s"></script>\n'
 element_template['css'] = '<link rel="stylesheet" href="%s">\n'
 
 regex = {}
-regex['js'] = re.compile(element_template['js'] % r'(/[^"]+\.js)')
-regex['css'] = re.compile(element_template['css'] % (r'(/[^"]+\.css)',))
+regex['js'] = re.compile(element_template['js'] % r'(.?/[^"]+\.js)')
+regex['css'] = re.compile(element_template['css'] % (r'(.?/[^"]+\.css)',))
 html_comment = re.compile(r'\s*<!--.*-->\s*')
 
 
@@ -97,18 +97,24 @@ def _logical_to_physical(file_name, file_type):
     """Return physical location of logically rooted file_name."""
     (dir_name, base_name) = os.path.split(file_name)
     layout = LAYOUT[file_type]
-    if not os.path.commonprefix([layout['logical'], dir_name]) == layout['logical']:
+    common_prefix = os.path.commonprefix([layout['logical'], dir_name])
+    if not common_prefix == layout['logical']:
         _error("Not a logically rooted file: %s", file_name)
-    return os.path.join(layout['physical'], base_name)
+    # Gather the rest of the path after the logical name.
+    rest_of_path = dir_name[len(common_prefix):]
+    return os.path.join(layout['physical'], rest_of_path, base_name)
 
 
 def _physical_to_logical(file_name, file_type):
     """Return logical location of physically rooted file_name."""
     (dir_name, base_name) = os.path.split(file_name)
     layout = LAYOUT[file_type]
-    if not os.path.commonprefix([layout['physical'], dir_name]) == layout['physical']:
+    common_prefix = os.path.commonprefix([layout['physical'], dir_name])
+    if not common_prefix == layout['physical']:
         _error("Not a physically rooted file: %s", file_name)
-    return os.path.join(layout['logical'], base_name)
+    # Gather the rest of the path after the physical name.
+    rest_of_path = dir_name[len(common_prefix):]
+    return os.path.join(layout['logical'], rest_of_path, base_name)
 
 
 def patch_html(file_type, html_file, prefix, no_backup=False):
