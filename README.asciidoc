@@ -54,7 +54,7 @@ process.
 During the development of the http://www.parkipedia.com[Parkipedia]
 website, we began looking around for an easy to use management framework
 that automates this process of concatenating and minifying CSS and
-JavaScript used within our pages.  After not finding simple solution
+JavaScript used within our pages.  After not finding a simple solution
 that meets our needs, we decided to take a few days and roll our own
 management framework.  The result is Yuicat.
 
@@ -91,8 +91,8 @@ resources are included with each page.
 The first step to adding Yuicat to a project is to describe both the
 physical and logical layout for the project.  The physical layout tells
 Yuicat where to find the HTML, CSS, and JavaScript files on the local
-system.  For example, at Parkipedia we use the following layout to
-organize our files:
+system.  For example, at Parkipedia we use the following physical layout
+to organize our files on the server:
 
 `$PARKIPEDIA/templates`:: HTML files used by Parkipedia.
 `$PARKIPEDIA/static/stylesheets`:: CSS used in Parkipedia.
@@ -101,8 +101,12 @@ organize our files:
 The logical layout describes the location from which the webserver
 serves CSS and JavaScript files.  These are the paths used by `link` and
 `script` tags to pull CSS and JavaScript into an HTML page.  This may,
-but need not, be the same as the physical layout.  The Parkipedia
-website serves files from the following locations:
+but need not, be the same as the physical layout.  As an example of
+different layouts, projects using a Django style templating system may
+remap URLs in incoming requests from a virtual layout presented to
+clients to a physical layout maintained on the server.  This is the case
+for the Parkipedia website that serves files from the following virtual
+locations:
 
 `/stylesheets`:: CSS served by http://www.parkipedia.com.
 `/js`:: JavaScript served by http://www.parkipedia.com.
